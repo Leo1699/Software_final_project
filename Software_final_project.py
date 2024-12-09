@@ -123,13 +123,13 @@ class Recognizer:
         anchor_x, anchor_y = rects[0][0], rects[0][1]
 
         self.sqinfo = {
-            'anchor_x': 15,  # 手动调整
+            'anchor_x': 16,  # 手动调整
             'anchor_y': 140,  # 手动调整
-            'hwidth': 38,
-            'vwidth': 38,
+            'hwidth': 37,
+            'vwidth': 37,
             'hgap': 6,
-            'vgap': 3,
-            'h': 44,
+            'vgap': 4,
+            'h': 43,
             'v': 41
         }
 
@@ -281,6 +281,12 @@ if __name__ == "__main__":
     # 识别数字矩阵
     recognizer = Recognizer()
     matrix = recognizer.get_matrix(screenshot)
+
+    # 将识别到的数字矩阵保存到 TXT 文件
+    with open("matrix_output.txt", "w") as file:
+        for row in matrix:
+            file.write(" ".join(map(str, row)) + "\n")
+    print("识别到的数字矩阵已保存到 matrix_output.txt")
 
     # 初始化 Eliminater
     eliminater = Eliminater(matrix)
