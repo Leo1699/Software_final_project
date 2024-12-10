@@ -108,16 +108,16 @@ class Recognizer:
         rects = [cv2.boundingRect(cnt) for cnt in contours]
         rects = sorted(rects, key=lambda x: (x[1], x[0]))  # 按 (y, x) 排序
 
-        if len(rects) < 20:  # 假设至少需要20个轮廓
-            raise ValueError("未检测到足够的方块轮廓")
-
-        # 计算锚点和间距
-        hwidth = rects[0][2]
-        vwidth = rects[0][3]
-        h_gaps = [rects[i + 1][0] - rects[i][0] for i in range(len(rects) - 1)]
-        v_gaps = [rects[i + 1][1] - rects[i][1] for i in range(len(rects) - 1)]
-        hgap = min([gap for gap in h_gaps if gap > hwidth])
-        vgap = min([gap for gap in v_gaps if gap > vwidth])
+        # if len(rects) < 20:  # 假设至少需要20个轮廓
+        #     raise ValueError("未检测到足够的方块轮廓")
+        #
+        # # 计算锚点和间距
+        # hwidth = rects[0][2]
+        # vwidth = rects[0][3]
+        # h_gaps = [rects[i + 1][0] - rects[i][0] for i in range(len(rects) - 1)]
+        # v_gaps = [rects[i + 1][1] - rects[i][1] for i in range(len(rects) - 1)]
+        # hgap = min([gap for gap in h_gaps if gap > hwidth])
+        # vgap = min([gap for gap in v_gaps if gap > vwidth])
 
         # 获取左上角第一个方块
         anchor_x, anchor_y = rects[0][0], rects[0][1]
@@ -181,9 +181,7 @@ class Eliminater:
         return 160 - np.sum(self.cal_matrix.astype(bool))
 
     def cal_all_x(self, End=False, action=False):
-        """
-        任意和为10的连续矩形，行优先的消除逻辑
-        """
+        """任意和为10的连续矩形，行优先的消除逻辑"""
         if End:
             return
         End = True
@@ -200,9 +198,7 @@ class Eliminater:
         self.cal_all_x(End=End, action=action)
 
     def cal_all_y(self, End=False, action=False):
-        """
-        任意和为10的连续矩形，列优先的消除逻辑
-        """
+        """任意和为10的连续矩形，列优先的消除逻辑"""
         if End:
             return
         End = True
@@ -260,19 +256,23 @@ class Eliminater:
                         break
         self.cal_two_y(End=End, action=action)
 
-    def execute_strategy(self, strategy_name):
-        """根据策略执行操作"""
-        self.actions.clear()
+    def run_strategy(self, strategy, action=False):
+        """按照策略执行多步骤操作"""
         self.cal_matrix = self.matrix.copy()
-        if strategy_name == "两数和行优先":
-            self.cal_two_x(action=True)
-        elif strategy_name == "两数和列优先":
-            self.cal_two_y(action=True)
-        elif strategy_name == "任意和行优先":
-            self.cal_all_x(action=True)
-        elif strategy_name == "任意和列优先":
-            self.cal_all_y(action=True)
-        return self.actions
+        if strategy[0] == 1:
+            self.cal_two_x(action=action)
+        elif strategy[0] == 2:
+            self.cal_two_y(action=action)
+        if strategy[1] == 1:
+            self.cal_all_x(action=action)
+        elif strategy[1] == 2:
+            self.cal_all_y(action=action)
+
+    def execute_strategy(self, strategy):
+        """执行指定策略并返回分数"""
+        self.actions.clear()
+        self.run_strategy(strategy, action=True)
+        return (strategy, self.score(), self.actions.copy())
 
 
 if __name__ == "__main__":
@@ -291,24 +291,42 @@ if __name__ == "__main__":
     # 初始化 Eliminater
     eliminater = Eliminater(matrix)
 
+    # 策略描述映射
+    strategy_descriptions = {
+        0: "无操作",
+        1: "两数和为10（行优先）",
+        2: "两数和为10（列优先）"
+    }
+
     # 策略计算
-    strategies = ["两数和行优先", "两数和列优先", "任意和行优先", "任意和列优先"]
+    strategies = [
+        [0, 1], [0, 2], [1, 0], [2, 0],
+        [1, 1], [1, 2], [2, 1], [2, 2]
+    ]
     strategy_scores = {}
     strategy_actions = {}
 
     for strategy in strategies:
-        eliminater.execute_strategy(strategy)
-        strategy_scores[strategy] = eliminater.score()
-        strategy_actions[strategy] = eliminater.actions
+        result = eliminater.execute_strategy(strategy)
+        score = result[1]  # 策略得分
+        actions = result[2]  # 策略执行的动作
+        strategy_scores[str(strategy)] = score
+        strategy_actions[str(strategy)] = actions
 
     # 找到最高分策略
     best_strategy = max(strategy_scores, key=strategy_scores.get)
+    best_score = strategy_scores[best_strategy]
     best_actions = strategy_actions[best_strategy]
+
+    # 将字符串解析为列表
+    parsed_strategy = list(map(int, best_strategy.strip('[]').split(',')))
 
     # 保存结果
     with open("result.txt", "w") as file:
-        file.write(f"最佳策略: {best_strategy}\n")
-        file.write(f"得分: {strategy_scores[best_strategy]}\n")
+        file.write(
+            f"最佳策略: {best_strategy} ({strategy_descriptions[parsed_strategy[0]]}, {strategy_descriptions[parsed_strategy[1]]})\n"
+        )
+        file.write(f"得分: {best_score}\n")
         file.write("消除步骤:\n")
         file.write("\n".join(best_actions))
 
