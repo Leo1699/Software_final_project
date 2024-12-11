@@ -202,7 +202,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向右查找
+                        if self.cal_matrix[x, begin_y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索左边
                 for x in range(begin_x - 1, -1, -1):
@@ -216,7 +220,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向左查找
+                        if self.cal_matrix[x, begin_y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索下面
                 for y in range(begin_y + 1, 10):
@@ -230,7 +238,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向下查找
+                        if self.cal_matrix[begin_x, y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索上面
                 for y in range(begin_y - 1, -1, -1):
@@ -244,7 +256,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向上查找
+                        if self.cal_matrix[begin_x, y] == 0:
+                            continue
+                        else:
+                            break
         self.cal_two_x(End=End, action=action)
 
     def cal_two_y(self, End=False, action=False):
@@ -269,7 +285,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向右查找
+                        if self.cal_matrix[x, begin_y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索左边
                 for x in range(begin_x - 1, -1, -1):
@@ -283,7 +303,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向左查找
+                        if self.cal_matrix[x, begin_y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索下面
                 for y in range(begin_y + 1, 10):
@@ -297,7 +321,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向下查找
+                        if self.cal_matrix[begin_x, y] == 0:
+                            continue
+                        else:
+                            break
 
                 # 搜索上面
                 for y in range(begin_y - 1, -1, -1):
@@ -311,7 +339,11 @@ class Eliminater:
                         End = False
                         break
                     else:
-                        break
+                        # 如果是0，继续向上查找
+                        if self.cal_matrix[begin_x, y] == 0:
+                            continue
+                        else:
+                            break
         self.cal_two_y(End=End, action=action)
 
     def run_strategy(self, strategy, action=False):
@@ -321,10 +353,16 @@ class Eliminater:
             self.cal_two_x(action=action)
         elif strategy[0] == 2:
             self.cal_two_y(action=action)
+        elif strategy[0] == 0 and strategy[1] != 0:
+            pass  # 仅执行 strategy[1] 的操作
+
         if strategy[1] == 1:
             self.cal_all_x(action=action)
         elif strategy[1] == 2:
             self.cal_all_y(action=action)
+        elif strategy[1] == 0 and strategy[0] != 0:
+            pass  # 仅执行 strategy[0] 的操作
+
 
     def execute_strategy(self, strategy):
         """执行指定策略并返回分数"""
@@ -334,7 +372,7 @@ class Eliminater:
 
 
 if __name__ == "__main__":
-    screenshot = cv2.imread("screenshot.png")
+    screenshot = cv2.imread("test11.png")
 
     # 识别数字矩阵
     recognizer = Recognizer()
@@ -351,11 +389,13 @@ if __name__ == "__main__":
 
     # 策略描述映射
     strategy_descriptions_first = {
+        0: "不进行操作",
         1: "两位数和为10（行优先）",
         2: "两位数和为10（列优先）"
     }
 
     strategy_descriptions_second = {
+        0: "不进行操作",
         1: "多位数和为10（行优先）",
         2: "多位数和为10（列优先）"
     }
@@ -365,6 +405,7 @@ if __name__ == "__main__":
         [0, 1], [0, 2], [1, 0], [2, 0],
         [1, 1], [1, 2], [2, 1], [2, 2]
     ]
+
     strategy_scores = {}
     strategy_actions = {}
 
