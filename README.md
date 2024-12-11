@@ -22,6 +22,8 @@ This project relies on the following Python libraries:
 - Pickle: Used for loading and storing pre-trained templates.
 - JSON: Used for loading and saving configuration files.
 
+## File Structure
+
 - `Software_final_project.py`: Main program file containing code for number recognition and strategy execution.
 - `Notebook_Version.ipynb`: Notebook version of the main program.
 - `template.pkl`: Stores pre-trained number templates.
@@ -30,4 +32,5 @@ This project relies on the following Python libraries:
 - `result.txt`: Final output. Stores best game score and elimination path.
 
 ## How to Run
+
 With all dependencies, run `Software_final_project.py` with any picture from `screenshot` and `template.pkl` as input. 
