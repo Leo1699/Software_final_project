@@ -1,17 +1,15 @@
 import cv2
 import numpy as np
-import pyautogui
-import pygetwindow as gw
 import pickle
 from collections import Counter
-
+import json
+import sys
+import time
 
 # 加载模板
 template = pickle.load(open('template.pkl', 'rb'))
 
-
 def recognize_digit(image):
-    """识别单个方块中的数字"""
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, image_ = cv2.threshold(gray_image, 127, 255, cv2.THRESH_BINARY)
     scores = np.zeros(10)
@@ -22,150 +20,118 @@ def recognize_digit(image):
         print('识别出错！')
     return np.argmax(scores)
 
-
 class Recognizer:
-    """识别模块，负责提取矩阵"""
-
     def __init__(self):
-        self.sqinfo = {}
-
-    # def get_sqinfo(self, image):
-    #     """改进提取方块锚点和间距信息"""
-    #     # 转为灰度图并检测边缘
-    #     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    #     img1 = cv2.GaussianBlur(gray, (3, 3), 0)
-    #     edges = cv2.Canny(img1, 50, 150)
-    #
-    #     # 使用霍夫线检测
-    #     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=150)  # 降低阈值提高检测率
-    #     horizontal_lines = []
-    #     vertical_lines = []
-    #     if lines is not None:
-    #         for line in lines:
-    #             rho, theta = line[0]
-    #             a = np.cos(theta)
-    #             b = np.sin(theta)
-    #             x0 = a * rho
-    #             y0 = b * rho
-    #             angle = int(theta * 180 / np.pi)
-    #             # 宽松的水平线和垂直线检测
-    #             if abs(angle - 0) <= 5 or abs(angle - 180) <= 5:  # 水平线
-    #                 horizontal_lines.append(int(y0))
-    #             elif abs(angle - 90) <= 5:  # 垂直线
-    #                 vertical_lines.append(int(x0))
-    #
-    #     # 确保排序
-    #     horizontal_lines = sorted(set(horizontal_lines))
-    #     vertical_lines = sorted(set(vertical_lines))
-    #
-    #     if len(horizontal_lines) < 2 or len(vertical_lines) < 2:
-    #         raise ValueError("检测的水平线或垂直线不足，无法提取锚点和间距")
-    #
-    #     # 计算间距
-    #     h_gaps = [horizontal_lines[i + 1] - horizontal_lines[i] for i in range(len(horizontal_lines) - 1)]
-    #     v_gaps = [vertical_lines[i + 1] - vertical_lines[i] for i in range(len(vertical_lines) - 1)]
-    #     hwidth = max(h_gaps, key=h_gaps.count)  # 最常见的水平间距
-    #     vwidth = max(v_gaps, key=v_gaps.count)  # 最常见的垂直间距
-    #     hgap = min(h_gaps)  # 最小水平间隙
-    #     vgap = min(v_gaps)  # 最小垂直间隙
-    #
-    #     # 选择锚点（左上角的线交点）
-    #     anchor_x = vertical_lines[0]
-    #     anchor_y = horizontal_lines[0]
-    #
-    #     self.sqinfo = {
-    #         'anchor_x': anchor_x,
-    #         'anchor_y': anchor_y,
-    #         'hwidth': hwidth,
-    #         'vwidth': vwidth,
-    #         'hgap': hgap,
-    #         'vgap': vgap,
-    #         'h': hwidth + hgap,
-    #         'v': vwidth + vgap
-    #     }
-    #
-    #     print(f"提取的方块信息: {self.sqinfo}")
-    #     return self.sqinfo
+        try:
+            self.sqinfo = json.load(open('sqinfo.json','r'))
+            print()
+            print('从sqinfo.json加载识别模块')
+            print(f"左上角方块锚点坐标({self.sqinfo['anchor_x']},{self.sqinfo['anchor_y']})")
+            print(f"方块高度{self.sqinfo['hwidth']}, 方块高度间隔{self.sqinfo['hgap']}")
+            print(f"方块宽度{self.sqinfo['vwidth']}, 方块宽度间隔{self.sqinfo['vgap']}")
+            print()
+            return
+        except:
+            pass
 
     def get_sqinfo(self, image):
-        """改进方块锚点和间距提取方法"""
+        try:
+            return self.sqinfo
+        except:
+            print()
+            print('初始化识别模块，请判断定位是否准确')
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # 尝试不同的二值化方法
-        _, binary = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)  # 反转二值化
-        # 或者使用自适应二值化
-        # binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-
-        # 查找轮廓
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # 可视化轮廓，调试用
-        debug_image = image.copy()
-        cv2.drawContours(debug_image, contours, -1, (0, 255, 0), 2)
-        cv2.imwrite("debug_contours.png", debug_image)
-
-        # 提取方块的外接矩形
-        rects = [cv2.boundingRect(cnt) for cnt in contours]
-        rects = sorted(rects, key=lambda x: (x[1], x[0]))  # 按 (y, x) 排序
-
-        # if len(rects) < 20:  # 假设至少需要20个轮廓
-        #     raise ValueError("未检测到足够的方块轮廓")
-        #
-        # # 计算锚点和间距
-        # hwidth = rects[0][2]
-        # vwidth = rects[0][3]
-        # h_gaps = [rects[i + 1][0] - rects[i][0] for i in range(len(rects) - 1)]
-        # v_gaps = [rects[i + 1][1] - rects[i][1] for i in range(len(rects) - 1)]
-        # hgap = min([gap for gap in h_gaps if gap > hwidth])
-        # vgap = min([gap for gap in v_gaps if gap > vwidth])
-
-        # 获取左上角第一个方块
-        anchor_x, anchor_y = rects[0][0], rects[0][1]
-
+        img1 = cv2.GaussianBlur(gray,(3,3),0)
+        edges = cv2.Canny(img1, 50, 150)
+        # 使用霍夫线变换检测直线
+        lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=200)
+        horizontal_lines = []
+        vertical_lines = []
+        if lines is not None:
+            for line in lines:
+                rho, theta = line[0]
+                if rho < 0 :
+                    continue
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a * rho
+                y0 = b * rho
+                # 根据角度进行分类，阈值可以根据实际情况调整
+                if 0 <= int(theta*180/np.pi) <= 2 or 178 <= int(theta*180/np.pi) <= 182:
+                    horizontal_lines.append(int(x0))
+                elif 88 <= int(theta*180/np.pi) <= 92:
+                    vertical_lines.append(int(y0))
+        # 对横线按照从上到下的顺序排序
+        horizontal_lines.sort()
+        vertical_lines.sort()
+        gaps = []
+        for i in range(len(horizontal_lines)-1):
+            gaps.append(horizontal_lines[i+1] - horizontal_lines[i])
+        cnt = Counter(gaps)
+        gaps = [cnt.most_common(2)[0][0], cnt.most_common(2)[1][0]]
+        hwidth = max(gaps)
+        hgap = min(gaps)
+        gaps = []
+        for i in range(len(vertical_lines)-1):
+            gaps.append(vertical_lines[i+1] - vertical_lines[i])
+        cnt = Counter(gaps)
+        gaps = [cnt.most_common(2)[0][0], cnt.most_common(2)[1][0]]
+        vwidth = max(gaps)
+        vgap = min(gaps)
+        for i in range(len(horizontal_lines)-1):
+            if horizontal_lines[i+1] - horizontal_lines[i] == hwidth:
+                anchor_x = horizontal_lines[i]
+                break
+        for i in range(len(vertical_lines)-1):
+            if vertical_lines[i+1] - vertical_lines[i] == vwidth:
+                anchor_y = vertical_lines[i]
+                break
         self.sqinfo = {
-            'anchor_x': 16,  # 手动调整
-            'anchor_y': 140,  # 手动调整
-            'hwidth': 37,
-            'vwidth': 37,
-            'hgap': 6,
-            'vgap': 4,
-            'h': 43,
-            'v': 41
+            'anchor_x':anchor_x,
+            'anchor_y':anchor_y,
+            'hwidth':hwidth,
+            'vwidth':vwidth,
+            'hgap':hgap,
+            'vgap':vgap,
+            'h':hgap+hwidth,
+            'v':vgap+vwidth
         }
-
-        print(f"提取的方块信息: {self.sqinfo}")
+        print(f'左上角方块锚点坐标({anchor_x},{anchor_y})，参考值（20,137）')
+        print(f'方块高度{hwidth}, 方块高度间隔{hgap}')
+        print(f'方块宽度{vwidth}, 方块宽度间隔{vgap}')
+        print('识别信息保存到sqinfo.json')
+        print()
+        json.dump(self.sqinfo, open('sqinfo.json','w'), indent=2)
         return self.sqinfo
-
 
     def crop_region(self, square):
         (x1, y1, x2, y2) = square
-        if x1 < 0 or y1 < 0 or x2 > self.image.shape[1] or y2 > self.image.shape[0]:
-            print(f"无效裁剪区域: {(x1, y1, x2, y2)}")
-            return None
+        # 通过切片提取矩形区域
         cropped_region = self.image[y1:y2, x1:x2]
-        if cropped_region is not None and cropped_region.size > 0:
-            cv2.imwrite(f"crop_{x1}_{y1}_{x2}_{y2}.png", cropped_region)  # 保存裁剪结果
         return cropped_region
 
     def get_matrix(self, image):
         self.image = image
         sqinfo = self.get_sqinfo(image)
+        # self.squares = self.find_all_squares() # 寻找所有方块的四角坐标 (x1, y1, x2, y2)
         squares = []
         for i in range(16):
             for j in range(10):
-                squares.append((sqinfo['anchor_x'] + j * sqinfo['h'],
-                                sqinfo['anchor_y'] + i * sqinfo['v'],
-                                sqinfo['anchor_x'] + sqinfo['hwidth'] + j * sqinfo['h'],
-                                sqinfo['anchor_y'] + sqinfo['vwidth'] + i * sqinfo['v']))
-        print(f"生成的裁剪区域数量: {len(squares)}")  # 添加此行
-        self.crop_images = list(map(self.crop_region, squares))
-        valid_crops = [crop for crop in self.crop_images if crop is not None]
-        print(f"有效裁剪区域数量: {len(valid_crops)}")  # 添加此行
-        recognized_digits = list(map(recognize_digit, valid_crops))
+                squares.append((sqinfo['anchor_x']+j*sqinfo['h'],
+                                sqinfo['anchor_y']+i*sqinfo['v'],
+                                sqinfo['anchor_x']+sqinfo['hwidth']+j*sqinfo['h'],
+                                sqinfo['anchor_y']+sqinfo['vwidth']+i*sqinfo['v']))
+        if len(squares)!= 160:
+            print(squares)
+            print('find squares error!')
+            return None, squares
+        self.crop_images = list(map(self.crop_region, squares)) # 根据坐标提取每个方块图片
+        recognized_digits = list(map(recognize_digit, self.crop_images))  # 多线程识别图片
         self.digits_matrix = []
         for i in range(16):
             self.digits_matrix.append((recognized_digits[i * 10:i * 10 + 10]))
-        return self.digits_matrix
+        return self.digits_matrix, squares
+
 
 
 class Eliminater:
@@ -223,6 +189,8 @@ class Eliminater:
             for begin_y in range(0, 10):
                 if self.cal_matrix[begin_x, begin_y] == 0:
                     continue
+
+                # 搜索右边
                 for x in range(begin_x + 1, 16):
                     if self.cal_matrix[x, begin_y] == 0:
                         continue
@@ -232,6 +200,50 @@ class Eliminater:
                         if action:
                             self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({x}, {begin_y})")
                         End = False
+                        break
+                    else:
+                        break
+
+                # 搜索左边
+                for x in range(begin_x - 1, -1, -1):
+                    if self.cal_matrix[x, begin_y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
+                        self.cal_matrix[x, begin_y] = 0
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({x}, {begin_y})")
+                        End = False
+                        break
+                    else:
+                        break
+
+                # 搜索下面
+                for y in range(begin_y + 1, 10):
+                    if self.cal_matrix[begin_x, y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        self.cal_matrix[begin_x, y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({begin_x}, {y})")
+                        End = False
+                        break
+                    else:
+                        break
+
+                # 搜索上面
+                for y in range(begin_y - 1, -1, -1):
+                    if self.cal_matrix[begin_x, y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        self.cal_matrix[begin_x, y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({begin_x}, {y})")
+                        End = False
+                        break
+                    else:
                         break
         self.cal_two_x(End=End, action=action)
 
@@ -244,6 +256,8 @@ class Eliminater:
             for begin_x in range(0, 16):
                 if self.cal_matrix[begin_x, begin_y] == 0:
                     continue
+
+                # 搜索右边
                 for x in range(begin_x + 1, 16):
                     if self.cal_matrix[x, begin_y] == 0:
                         continue
@@ -253,6 +267,50 @@ class Eliminater:
                         if action:
                             self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({x}, {begin_y})")
                         End = False
+                        break
+                    else:
+                        break
+
+                # 搜索左边
+                for x in range(begin_x - 1, -1, -1):
+                    if self.cal_matrix[x, begin_y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
+                        self.cal_matrix[x, begin_y] = 0
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({x}, {begin_y})")
+                        End = False
+                        break
+                    else:
+                        break
+
+                # 搜索下面
+                for y in range(begin_y + 1, 10):
+                    if self.cal_matrix[begin_x, y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        self.cal_matrix[begin_x, y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({begin_x}, {y})")
+                        End = False
+                        break
+                    else:
+                        break
+
+                # 搜索上面
+                for y in range(begin_y - 1, -1, -1):
+                    if self.cal_matrix[begin_x, y] == 0:
+                        continue
+                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
+                        self.cal_matrix[begin_x, begin_y] = 0
+                        self.cal_matrix[begin_x, y] = 0
+                        if action:
+                            self.actions.append(f"消除 ({begin_x}, {begin_y}) 和 ({begin_x}, {y})")
+                        End = False
+                        break
+                    else:
                         break
         self.cal_two_y(End=End, action=action)
 
@@ -280,7 +338,7 @@ if __name__ == "__main__":
 
     # 识别数字矩阵
     recognizer = Recognizer()
-    matrix = recognizer.get_matrix(screenshot)
+    matrix, _ = recognizer.get_matrix(screenshot)
 
     # 将识别到的数字矩阵保存到 TXT 文件
     with open("matrix_output.txt", "w") as file:
@@ -292,10 +350,14 @@ if __name__ == "__main__":
     eliminater = Eliminater(matrix)
 
     # 策略描述映射
-    strategy_descriptions = {
-        0: "无操作",
-        1: "两数和为10（行优先）",
-        2: "两数和为10（列优先）"
+    strategy_descriptions_first = {
+        1: "两位数和为10（行优先）",
+        2: "两位数和为10（列优先）"
+    }
+
+    strategy_descriptions_second = {
+        1: "多位数和为10（行优先）",
+        2: "多位数和为10（列优先）"
     }
 
     # 策略计算
@@ -324,7 +386,8 @@ if __name__ == "__main__":
     # 保存结果
     with open("result.txt", "w") as file:
         file.write(
-            f"最佳策略: {best_strategy} ({strategy_descriptions[parsed_strategy[0]]}, {strategy_descriptions[parsed_strategy[1]]})\n"
+            f"最佳策略: {best_strategy} "
+            f"({strategy_descriptions_first[parsed_strategy[0]]}, {strategy_descriptions_second[parsed_strategy[1]]})\n"
         )
         file.write(f"得分: {best_score}\n")
         file.write("消除步骤:\n")
