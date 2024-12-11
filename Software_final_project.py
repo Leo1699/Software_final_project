@@ -3,11 +3,11 @@ import numpy as np
 import pickle
 from collections import Counter
 import json
-import sys
-import time
+
 
 # Load the template
 template = pickle.load(open('template.pkl', 'rb'))
+
 
 def detect_digit(image):
     """
@@ -29,6 +29,7 @@ def detect_digit(image):
         print('Recognition error!')
     return np.argmax(scores)
 
+
 class Recognizer:
     def __init__(self):
         """
@@ -38,12 +39,15 @@ class Recognizer:
             self.sqinfo = json.load(open('sqinfo.json', 'r'))
             print()
             print('Loaded recognition module from sqinfo.json')
-            print(f"Top-left square anchor coordinates ({self.sqinfo['anchor_x']},{self.sqinfo['anchor_y']})")
-            print(f"Square height {self.sqinfo['hwidth']}, height gap {self.sqinfo['hgap']}")
-            print(f"Square width {self.sqinfo['vwidth']}, width gap {self.sqinfo['vgap']}")
+            print(
+                f"Top-left square anchor coordinates ({self.sqinfo['anchor_x']},{self.sqinfo['anchor_y']})")
+            print(
+                f"Square height {self.sqinfo['hwidth']}, height gap {self.sqinfo['hgap']}")
+            print(
+                f"Square width {self.sqinfo['vwidth']}, width gap {self.sqinfo['vgap']}")
             print()
             return
-        except:
+        except BaseException:
             pass
 
     def extract_square_info(self, image):
@@ -58,9 +62,10 @@ class Recognizer:
         """
         try:
             return self.sqinfo
-        except:
+        except BaseException:
             print()
-            print('Initializing recognition module. Please verify if positioning is accurate.')
+            print(
+                'Initializing recognition module. Please verify if positioning is accurate.')
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         img1 = cv2.GaussianBlur(gray, (3, 3), 0)
         edges = cv2.Canny(img1, 50, 150)
@@ -77,8 +82,15 @@ class Recognizer:
                 b = np.sin(theta)
                 x0 = a * rho
                 y0 = b * rho
-                # Categorize lines by angle; thresholds can be adjusted based on actual conditions
-                if 0 <= int(theta * 180 / np.pi) <= 2 or 178 <= int(theta * 180 / np.pi) <= 182:
+                # Categorize lines by angle; thresholds can be adjusted based
+                # on actual conditions
+                if 0 <= int(
+                        theta *
+                        180 /
+                        np.pi) <= 2 or 178 <= int(
+                        theta *
+                        180 /
+                        np.pi) <= 182:
                     horizontal_lines.append(int(x0))
                 elif 88 <= int(theta * 180 / np.pi) <= 92:
                     vertical_lines.append(int(y0))
@@ -117,7 +129,8 @@ class Recognizer:
             'h': hgap + hwidth,
             'v': vgap + vwidth
         }
-        print(f'Top-left square anchor coordinates ({anchor_x},{anchor_y}), reference value (20,137)')
+        print(
+            f'Top-left square anchor coordinates ({anchor_x},{anchor_y}), reference value (20,137)')
         print(f'Square height {hwidth}, height gap {hgap}')
         print(f'Square width {vwidth}, width gap {vgap}')
         print('Recognition information saved to sqinfo.json')
@@ -162,17 +175,19 @@ class Recognizer:
         squares = []
         for i in range(16):
             for j in range(10):
-                squares.append((sqinfo['anchor_x'] + j * sqinfo['h'],
-                                sqinfo['anchor_y'] + i * sqinfo['v'],
-                                sqinfo['anchor_x'] + sqinfo['hwidth'] + j * sqinfo['h'],
-                                sqinfo['anchor_y'] + sqinfo['vwidth'] + i * sqinfo['v']))
+                squares.append(
+                    (sqinfo['anchor_x'] + j * sqinfo['h'],
+                     sqinfo['anchor_y'] + i * sqinfo['v'],
+                        sqinfo['anchor_x'] + sqinfo['hwidth'] + j * sqinfo['h'],
+                        sqinfo['anchor_y'] + sqinfo['vwidth'] + i * sqinfo['v']))
         if len(squares) != 160:
             print(squares)
             print('find squares error!')
             return None, squares
         # Crop images from the identified square coordinates
         self.crop_images = list(map(self.extract_subimage, squares))
-        # Recognize digits in the cropped images using a recognition function (multi-threaded)
+        # Recognize digits in the cropped images using a recognition function
+        # (multi-threaded)
         recognized_digits = list(map(detect_digit, self.crop_images))
         self.digits_matrix = []
         for i in range(16):
@@ -206,7 +221,7 @@ class Eliminater:
 
     def eliminate_all_rows(self, End=False, action=False):
         """
-        Elimination logic for any continuous rectangle with a sum of 10, row-priority.
+        Eliminate any continuous rectangle with a sum of 10, prioritizing rows.
 
         Args:
             End (bool): Flag indicating whether to stop the recursion.
@@ -215,22 +230,41 @@ class Eliminater:
         if End:
             return
         End = True
-        for x_len in range(1, 16):
-            for y_len in range(1, 10):
-                for begin_x in range(0, 16 - x_len + 1):
-                    for begin_y in range(0, 10 - y_len + 1):
-                        _sum = np.sum(self.cal_matrix[begin_x:begin_x + x_len, begin_y:begin_y + y_len])
-                        if _sum == 10:
-                            self.cal_matrix[begin_x:begin_x + x_len, begin_y:begin_y + y_len] = 0
+
+        # Iterate over possible rectangle dimensions
+        for rect_height in range(1, 16):  # Rectangle height
+            for rect_width in range(1, 10):  # Rectangle width
+
+                # Iterate over possible top-left corners of the rectangle
+                for top_row in range(0, 16 - rect_height + 1):  # Starting row
+                    for left_col in range(
+                            0, 10 - rect_width + 1):  # Starting column
+
+                        # Calculate the sum of the rectangle
+                        rect_sum = np.sum(self.cal_matrix[
+                                          top_row:top_row + rect_height,
+                                          left_col:left_col + rect_width
+                                          ])
+
+                        # If the sum is 10, eliminate the rectangle
+                        if rect_sum == 10:
+                            self.cal_matrix[
+                                top_row:top_row + rect_height,
+                                left_col:left_col + rect_width
+                            ] = 0
+
                             if action:
                                 self.actions.append(
-                                    f"Eliminate ({begin_x}:{begin_x + x_len}, {begin_y}:{begin_y + y_len})")
+                                    f"Eliminate ({top_row}:{top_row + rect_height}, {left_col}:{left_col + rect_width})"
+                                )
                             End = False
+
+        # Recursively check for further eliminations
         self.eliminate_all_rows(End=End, action=action)
 
     def eliminate_all_columns(self, End=False, action=False):
         """
-        Elimination logic for any continuous rectangle with a sum of 10, column-priority.
+        Eliminate any continuous rectangle with a sum of 10, prioritizing columns.
 
         Args:
             End (bool): Flag indicating whether to stop the recursion.
@@ -239,22 +273,41 @@ class Eliminater:
         if End:
             return
         End = True
-        for y_len in range(1, 10):
-            for x_len in range(1, 16):
-                for begin_x in range(0, 16 - x_len + 1):
-                    for begin_y in range(0, 10 - y_len + 1):
-                        _sum = np.sum(self.cal_matrix[begin_x:begin_x + x_len, begin_y:begin_y + y_len])
-                        if _sum == 10:
-                            self.cal_matrix[begin_x:begin_x + x_len, begin_y:begin_y + y_len] = 0
+
+        # Iterate over possible rectangle dimensions
+        for rect_width in range(1, 10):  # Rectangle width
+            for rect_height in range(1, 16):  # Rectangle height
+
+                # Iterate over possible top-left corners of the rectangle
+                for top_row in range(0, 16 - rect_height + 1):  # Starting row
+                    for left_col in range(
+                            0, 10 - rect_width + 1):  # Starting column
+
+                        # Calculate the sum of the rectangle
+                        rect_sum = np.sum(self.cal_matrix[
+                                          top_row:top_row + rect_height,
+                                          left_col:left_col + rect_width
+                                          ])
+
+                        # If the sum is 10, eliminate the rectangle
+                        if rect_sum == 10:
+                            self.cal_matrix[
+                                top_row:top_row + rect_height,
+                                left_col:left_col + rect_width
+                            ] = 0
+
                             if action:
                                 self.actions.append(
-                                    f"Eliminate ({begin_x}:{begin_x + x_len}, {begin_y}:{begin_y + y_len})")
+                                    f"Eliminate ({top_row}:{top_row + rect_height}, {left_col}:{left_col + rect_width})"
+                                )
                             End = False
+
+        # Recursively check for further eliminations
         self.eliminate_all_columns(End=End, action=action)
 
     def eliminate_pairs_rows(self, End=False, action=False):
         """
-        Elimination logic for pairs of numbers whose sum is 10, row-priority.
+        Eliminate pairs of numbers whose sum is 10, prioritizing rows.
 
         Args:
             End (bool): Flag indicating whether to stop the recursion.
@@ -263,71 +316,79 @@ class Eliminater:
         if End:
             return
         End = True
-        for begin_x in range(0, 16):
-            for begin_y in range(0, 10):
-                if self.cal_matrix[begin_x, begin_y] == 0:
+
+        # Iterate over each cell in the matrix
+        for row in range(0, 16):
+            for col in range(0, 10):
+                if self.cal_matrix[row, col] == 0:
                     continue
 
                 # Search to the right
-                for x in range(begin_x + 1, 16):
-                    if self.cal_matrix[x, begin_y] == 0:
+                for r in range(row + 1, 16):
+                    if self.cal_matrix[r, col] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
-                        self.cal_matrix[x, begin_y] = 0
-                        self.cal_matrix[begin_x, begin_y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[r, col] == 10:
+                        self.cal_matrix[r, col] = 0
+                        self.cal_matrix[row, col] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({x}, {begin_y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({r}, {col})")
                         End = False
                         break
                     else:
                         break
 
                 # Search to the left
-                for x in range(begin_x - 1, -1, -1):
-                    if self.cal_matrix[x, begin_y] == 0:
+                for r in range(row - 1, -1, -1):
+                    if self.cal_matrix[r, col] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
-                        self.cal_matrix[x, begin_y] = 0
-                        self.cal_matrix[begin_x, begin_y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[r, col] == 10:
+                        self.cal_matrix[r, col] = 0
+                        self.cal_matrix[row, col] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({x}, {begin_y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({r}, {col})")
                         End = False
                         break
                     else:
                         break
 
                 # Search downwards
-                for y in range(begin_y + 1, 10):
-                    if self.cal_matrix[begin_x, y] == 0:
+                for c in range(col + 1, 10):
+                    if self.cal_matrix[row, c] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        self.cal_matrix[begin_x, y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[row, c] == 10:
+                        self.cal_matrix[row, col] = 0
+                        self.cal_matrix[row, c] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({begin_x}, {y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({row}, {c})")
                         End = False
                         break
                     else:
                         break
 
                 # Search upwards
-                for y in range(begin_y - 1, -1, -1):
-                    if self.cal_matrix[begin_x, y] == 0:
+                for c in range(col - 1, -1, -1):
+                    if self.cal_matrix[row, c] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        self.cal_matrix[begin_x, y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[row, c] == 10:
+                        self.cal_matrix[row, col] = 0
+                        self.cal_matrix[row, c] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({begin_x}, {y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({row}, {c})")
                         End = False
                         break
                     else:
                         break
+
+        # Recursively check for further eliminations
         self.eliminate_pairs_rows(End=End, action=action)
 
     def eliminate_pairs_columns(self, End=False, action=False):
         """
-        Elimination logic for pairs of numbers whose sum is 10, column-priority.
+        Eliminate pairs of numbers whose sum is 10, prioritizing columns.
 
         Args:
             End (bool): Flag indicating whether to stop the recursion.
@@ -336,66 +397,74 @@ class Eliminater:
         if End:
             return
         End = True
-        for begin_y in range(0, 10):
-            for begin_x in range(0, 16):
-                if self.cal_matrix[begin_x, begin_y] == 0:
+
+        # Iterate over each column
+        for col in range(0, 10):
+            for row in range(0, 16):
+                if self.cal_matrix[row, col] == 0:
                     continue
 
-                # Search to the right
-                for x in range(begin_x + 1, 16):
-                    if self.cal_matrix[x, begin_y] == 0:
-                        continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
-                        self.cal_matrix[x, begin_y] = 0
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({x}, {begin_y})")
-                        End = False
-                        break
-                    else:
-                        break
-
-                # Search to the left
-                for x in range(begin_x - 1, -1, -1):
-                    if self.cal_matrix[x, begin_y] == 0:
-                        continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[x, begin_y] == 10:
-                        self.cal_matrix[x, begin_y] = 0
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({x}, {begin_y})")
-                        End = False
-                        break
-                    else:
-                        break
-
                 # Search downwards
-                for y in range(begin_y + 1, 10):
-                    if self.cal_matrix[begin_x, y] == 0:
+                for r in range(row + 1, 16):
+                    if self.cal_matrix[r, col] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        self.cal_matrix[begin_x, y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[r, col] == 10:
+                        self.cal_matrix[r, col] = 0
+                        self.cal_matrix[row, col] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({begin_x}, {y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({r}, {col})")
                         End = False
                         break
                     else:
                         break
 
                 # Search upwards
-                for y in range(begin_y - 1, -1, -1):
-                    if self.cal_matrix[begin_x, y] == 0:
+                for r in range(row - 1, -1, -1):
+                    if self.cal_matrix[r, col] == 0:
                         continue
-                    elif self.cal_matrix[begin_x, begin_y] + self.cal_matrix[begin_x, y] == 10:
-                        self.cal_matrix[begin_x, begin_y] = 0
-                        self.cal_matrix[begin_x, y] = 0
+                    elif self.cal_matrix[row, col] + self.cal_matrix[r, col] == 10:
+                        self.cal_matrix[r, col] = 0
+                        self.cal_matrix[row, col] = 0
                         if action:
-                            self.actions.append(f"Eliminate ({begin_x}, {begin_y}) and ({begin_x}, {y})")
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({r}, {col})")
                         End = False
                         break
                     else:
                         break
+
+                # Search to the right
+                for c in range(col + 1, 10):
+                    if self.cal_matrix[row, c] == 0:
+                        continue
+                    elif self.cal_matrix[row, col] + self.cal_matrix[row, c] == 10:
+                        self.cal_matrix[row, c] = 0
+                        self.cal_matrix[row, col] = 0
+                        if action:
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({row}, {c})")
+                        End = False
+                        break
+                    else:
+                        break
+
+                # Search to the left
+                for c in range(col - 1, -1, -1):
+                    if self.cal_matrix[row, c] == 0:
+                        continue
+                    elif self.cal_matrix[row, col] + self.cal_matrix[row, c] == 10:
+                        self.cal_matrix[row, c] = 0
+                        self.cal_matrix[row, col] = 0
+                        if action:
+                            self.actions.append(
+                                f"Eliminate ({row}, {col}) and ({row}, {c})")
+                        End = False
+                        break
+                    else:
+                        break
+
+        # Recursively check for further eliminations
         self.eliminate_pairs_columns(End=End, action=action)
 
     def run_strategy(self, strategy, action=False):
