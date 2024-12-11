@@ -524,7 +524,7 @@ if __name__ == "__main__":
     5. Finds and saves the best strategy based on scores.
     """
 
-    screenshot = cv2.imread("test11.png")
+    screenshot = cv2.imread("screenshot.png")
 
     # Recognize the numeric matrix
     recognizer = Recognizer()
