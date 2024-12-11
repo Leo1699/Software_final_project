@@ -9,7 +9,7 @@ import time
 # Load the template
 template = pickle.load(open('template.pkl', 'rb'))
 
-def recognize_digit(image):
+def detect_digit(image):
     """
     Recognize a digit from the given image using template matching.
 
@@ -46,7 +46,7 @@ class Recognizer:
         except:
             pass
 
-    def get_sqinfo(self, image):
+    def extract_square_info(self, image):
         """
         Calculate and return the recognition parameters from the given image.
 
@@ -125,7 +125,7 @@ class Recognizer:
         json.dump(self.sqinfo, open('sqinfo.json', 'w'), indent=2)
         return self.sqinfo
 
-    def crop_region(self, square):
+    def extract_subimage(self, square):
         """
         Extract a rectangular region from the image based on the given coordinates.
 
@@ -157,7 +157,7 @@ class Recognizer:
                   the top-left and bottom-right corners of a square (x1, y1, x2, y2).
         """
         self.image = image
-        sqinfo = self.get_sqinfo(image)
+        sqinfo = self.extract_square_info(image)
         # squares: Find the coordinates of all squares (x1, y1, x2, y2)
         squares = []
         for i in range(16):
@@ -171,9 +171,9 @@ class Recognizer:
             print('find squares error!')
             return None, squares
         # Crop images from the identified square coordinates
-        self.crop_images = list(map(self.crop_region, squares))
+        self.crop_images = list(map(self.extract_subimage, squares))
         # Recognize digits in the cropped images using a recognition function (multi-threaded)
-        recognized_digits = list(map(recognize_digit, self.crop_images))
+        recognized_digits = list(map(detect_digit, self.crop_images))
         self.digits_matrix = []
         for i in range(16):
             self.digits_matrix.append((recognized_digits[i * 10:i * 10 + 10]))
@@ -204,7 +204,7 @@ class Eliminater:
         """
         return 160 - np.sum(self.cal_matrix.astype(bool))
 
-    def cal_all_x(self, End=False, action=False):
+    def eliminate_all_rows(self, End=False, action=False):
         """
         Elimination logic for any continuous rectangle with a sum of 10, row-priority.
 
@@ -226,9 +226,9 @@ class Eliminater:
                                 self.actions.append(
                                     f"Eliminate ({begin_x}:{begin_x + x_len}, {begin_y}:{begin_y + y_len})")
                             End = False
-        self.cal_all_x(End=End, action=action)
+        self.eliminate_all_rows(End=End, action=action)
 
-    def cal_all_y(self, End=False, action=False):
+    def eliminate_all_columns(self, End=False, action=False):
         """
         Elimination logic for any continuous rectangle with a sum of 10, column-priority.
 
@@ -250,9 +250,9 @@ class Eliminater:
                                 self.actions.append(
                                     f"Eliminate ({begin_x}:{begin_x + x_len}, {begin_y}:{begin_y + y_len})")
                             End = False
-        self.cal_all_y(End=End, action=action)
+        self.eliminate_all_columns(End=End, action=action)
 
-    def cal_two_x(self, End=False, action=False):
+    def eliminate_pairs_rows(self, End=False, action=False):
         """
         Elimination logic for pairs of numbers whose sum is 10, row-priority.
 
@@ -323,9 +323,9 @@ class Eliminater:
                         break
                     else:
                         break
-        self.cal_two_x(End=End, action=action)
+        self.eliminate_pairs_rows(End=End, action=action)
 
-    def cal_two_y(self, End=False, action=False):
+    def eliminate_pairs_columns(self, End=False, action=False):
         """
         Elimination logic for pairs of numbers whose sum is 10, column-priority.
 
@@ -396,7 +396,7 @@ class Eliminater:
                         break
                     else:
                         break
-        self.cal_two_y(End=End, action=action)
+        self.eliminate_pairs_columns(End=End, action=action)
 
     def run_strategy(self, strategy, action=False):
         """
@@ -408,24 +408,24 @@ class Eliminater:
         """
         self.cal_matrix = self.matrix.copy()
         if strategy[0] == 1:
-            self.cal_two_x(action=action)
+            self.eliminate_pairs_rows(action=action)
         elif strategy[0] == 2:
-            self.cal_two_y(action=action)
+            self.eliminate_pairs_columns(action=action)
         elif strategy[0] == 3:
-            self.cal_all_x(action=action)
+            self.eliminate_all_rows(action=action)
         elif strategy[0] == 4:
-            self.cal_all_y(action=action)
+            self.eliminate_all_columns(action=action)
         elif strategy[0] == 0 and strategy[1] != 0:
             pass  # Execute only strategy[1]
 
         if strategy[1] == 1:
-            self.cal_two_x(action=action)
+            self.eliminate_pairs_rows(action=action)
         elif strategy[1] == 2:
-            self.cal_two_y(action=action)
+            self.eliminate_pairs_columns(action=action)
         elif strategy[1] == 3:
-            self.cal_all_x(action=action)
+            self.eliminate_all_rows(action=action)
         elif strategy[1] == 4:
-            self.cal_all_y(action=action)
+            self.eliminate_all_columns(action=action)
         elif strategy[1] == 0 and strategy[0] != 0:
             pass  # Execute only strategy[0]
 
