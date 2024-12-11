@@ -353,12 +353,20 @@ class Eliminater:
             self.cal_two_x(action=action)
         elif strategy[0] == 2:
             self.cal_two_y(action=action)
+        elif strategy[0] == 3:
+            self.cal_all_x(action=action)
+        elif strategy[0] == 4:
+            self.cal_all_y(action=action)
         elif strategy[0] == 0 and strategy[1] != 0:
             pass  # 仅执行 strategy[1] 的操作
 
         if strategy[1] == 1:
-            self.cal_all_x(action=action)
+            self.cal_two_x(action=action)
         elif strategy[1] == 2:
+            self.cal_two_y(action=action)
+        elif strategy[1] == 3:
+            self.cal_all_x(action=action)
+        elif strategy[1] == 4:
             self.cal_all_y(action=action)
         elif strategy[1] == 0 and strategy[0] != 0:
             pass  # 仅执行 strategy[0] 的操作
@@ -391,19 +399,27 @@ if __name__ == "__main__":
     strategy_descriptions_first = {
         0: "不进行操作",
         1: "两位数和为10（行优先）",
-        2: "两位数和为10（列优先）"
+        2: "两位数和为10（列优先）",
+        3: "多位数和为10（行优先）",
+        4: "多位数和为10（列优先）"
     }
 
     strategy_descriptions_second = {
         0: "不进行操作",
-        1: "多位数和为10（行优先）",
-        2: "多位数和为10（列优先）"
+        1: "两位数和为10（行优先）",
+        2: "两位数和为10（列优先）",
+        3: "多位数和为10（行优先）",
+        4: "多位数和为10（列优先）"
     }
 
     # 策略计算
     strategies = [
-        [0, 1], [0, 2], [1, 0], [2, 0],
-        [1, 1], [1, 2], [2, 1], [2, 2]
+        [0, 1], [0, 2], [0, 3], [0, 4],
+        [1, 0], [2, 0], [3, 0], [4, 0],
+        [1, 1], [1, 2], [1, 3], [1, 4],
+        [2, 1], [2, 2], [2, 3], [2, 4],
+        [3, 1], [3, 2], [3, 3], [3, 4],
+        [4, 1], [4, 2], [4, 3], [4, 4]
     ]
 
     strategy_scores = {}
