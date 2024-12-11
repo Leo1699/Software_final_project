@@ -27,10 +27,11 @@ This project relies on the following Python libraries:
 - `Software_final_project.py`: Main program file containing code for number recognition and strategy execution.
 - `Notebook_Version.ipynb`: Notebook version of the main program.
 - `template.pkl`: Stores pre-trained number templates.
-- `screenshot`: Sample screenshots took from the game. Input of this project.
+- `Test_game_picture`: Sample screenshots took from the game. Input of this project.
 - `matrix_output`: Stores matrix for the input image. Generated from the code.
 - `result.txt`: Final output. Stores best game score and elimination path.
 
 ## How to Run
 
 With all dependencies, run `Software_final_project.py` with any picture from `screenshot` and `template.pkl` as input. 
+When  you try to use another image, please delete the `sqinfo.json`. The new one will be generated automatically with the new image.
