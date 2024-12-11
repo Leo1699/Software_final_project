@@ -22,13 +22,13 @@ This project relies on the following Python libraries:
 - Pickle: Used for loading and storing pre-trained templates.
 - JSON: Used for loading and saving configuration files.
 
-`Software_final_project.py`: Main program file containing code for number recognition and strategy execution.
-`Notebook_Version.ipynb`: Notebook version of the main program.
-`template.pkl`: Stores pre-trained number templates.
-`sqinfo.json`: Stores information about the game board configuration. This can be directly used for the screenshot we provide. If the screenshot is taken with different size, generate a new one from the code.
-`screenshot`: Sample screenshots took from the game. Input of this project.
-`matrix_output`: Stores matrix for the input image. Generated from the code.
-`result.txt`: Final output. Stores best game score and elimination path.
+- `Software_final_project.py`: Main program file containing code for number recognition and strategy execution.
+- `Notebook_Version.ipynb`: Notebook version of the main program.
+- `template.pkl`: Stores pre-trained number templates.
+- `sqinfo.json`: Stores information about the game board configuration. This can be directly used for the screenshot we provide. If the screenshot is taken with different size, generate a new one from the code.
+- `screenshot`: Sample screenshots took from the game. Input of this project.
+- `matrix_output`: Stores matrix for the input image. Generated from the code.
+- `result.txt`: Final output. Stores best game score and elimination path.
 
 ## How to Run
 With all dependencies, run `Software_final_project.py` with any picture from `screenshot` and `template.pkl` as input. 
